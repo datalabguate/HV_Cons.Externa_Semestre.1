@@ -1,0 +1,793 @@
+---
+title: "HV_Cons.Ext_2024_Semestre.1"
+author: "Federico J. Villatoro"
+date: "`r Sys.Date()`"
+output: 
+  flexdashboard::flex_dashboard
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+	message = FALSE,
+	include = TRUE
+)
+```
+
+```{r packages, message=FALSE, include=FALSE}
+if (!require(tidyverse)) install.packages("tidyverse")
+if (!require(googlesheets4)) install.packages("googlesheets4"); gs4_deauth() 
+if (!require(MASS)) install.packages("MASS")
+if (!require(knitr)) install.packages("knitr")
+if (!require(DT)) install.packages("DT")
+if (!require(writexl)) install.packages("writexl")
+if (!require(readxl)) install.packages("readxl")
+if (!require(googledrive)) install.packages("googledrive")
+if (!require(flexdashboard)) install.packages("flexdashboard")
+if (!require(DT)) install.packages("DT")
+if (!require(data.table)) install.packages("data.table")
+if (!require(scales)) install.packages("scales")
+if (!require(ggbreak)) install.packages("ggbreak")
+if (!require(arm)) install.packages("arm")
+if (!require(gridExtra)) install.packages("gridExtra")
+
+library(gridExtra)
+library(scales)
+library(ggbreak)
+library(arm)
+library(data.table)
+library(DT)
+library(flexdashboard)
+library(readr)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(plotly)
+library(knitr)
+library(DT)
+library(googledrive)
+library(googlesheets4)
+
+# Useful Code : 
+
+#### append(drive_link(drive_ls(path=as_id(id))),drive_link(drive_ls(path=as_id(id2)))) -> list_fichas
+
+```
+
+Pacientes {data-orientation="columns"}
+============================================================
+
+Inputs {.sidebar}
+------------------------------------------------------
+
+### Leyendo Libro consolidado de primer semestre del 2024
+
+
+```{r}
+options(gargle_oauth_email = "villatoropazfj@dataanalysislab.com")
+##
+##
+gs4_deauth()
+gs4_auth()
+```
+
+
+```{r}
+ss= "https://docs.google.com/spreadsheets/d/1b4B1NbiTdOFt8NX-R0eu-iEzpmHmQ8Wqx_Zel4h3JLI/edit?usp=sharing"
+rango= "A1:LQ341"
+df_merged <- read_sheet(ss,
+                     sheet= 1,
+                     range= rango,
+                     col_names = TRUE,
+                     na= "")
+
+df.all <- df_merged
+```  
+
+
+Column {data-width="130"}
+---------------------------------------------------------
+
+### Cantidad de Fichas en el primer semestre (2024)
+
+```{r echo=FALSE, include=TRUE, }
+num_fichas <- nrow(df_merged)
+
+valueBox(num_fichas,
+         caption = 'Pacientes',
+         icon= 'fa-comments')  
+
+```  
+
+### Cantidad de Pacientes Caninos en el primer semestre (2024)
+
+```{r echo=FALSE, include=TRUE, }
+num_fichas <- nrow(df_merged[df_merged$especie=="Canino",]) -1
+
+valueBox(num_fichas,
+         caption = 'Caninos',
+         icon= 'fa-dog')  
+
+```  
+
+### Cantidad de Pacientes Felinos en el primer semestre (2024)
+
+```{r echo=FALSE, include=TRUE, }
+num_fichas <- nrow(df_merged[df_merged$especie=="Felino",]) -1
+
+valueBox(num_fichas,
+         caption = 'Felinos',
+         icon= 'fa-cat')  
+
+```  
+
+### Porcentaje de pacientes Caninos con un Diagnóstico
+
+```{r echo=FALSE, include= TRUE}
+df.can <- df_merged[df_merged$especie=="Canino",]
+Pctje_Dx <- 100 *  (((sum(as.numeric((rowSums(cbind( dx1=as.numeric(!is.na(df.can$dx1)), dx21=as.numeric(!is.na(df.can$dx2)), dx3=as.numeric(!is.na(df.can$dx3)), dx4=as.numeric(!is.na(df.can$dx4)), dx5=as.numeric(!is.na(df.can$dx5)) ) ) )>0))) / nrow(df.can)))
+
+gauge(value= Pctje_Dx,
+      min= 0,
+      max= 100,
+      symbol = '%',
+      label = "Caninos con Dx. (%)",
+      sectors= gaugeSectors(
+  success = c(80,100),
+  warning = c(56,79),
+  danger = c(0,55),
+  colors = c("success", "warning", "danger"))
+  )
+
+```  
+### Porcentaje de pacientes Felinos con un Diagnóstico
+
+```{r echo=FALSE, include= TRUE}
+df.fel <- df_merged[df_merged$especie=="Felino",]
+Pctje_Dx <- 100 *  (((sum(as.numeric((rowSums(cbind( dx1=as.numeric(!is.na(df.fel$dx1)), dx21=as.numeric(!is.na(df.fel$dx2)), dx3=as.numeric(!is.na(df.fel$dx3)), dx4=as.numeric(!is.na(df.fel$dx4)), dx5=as.numeric(!is.na(df.fel$dx5)) ) ) )>0))) / nrow(df.fel)))
+
+gauge(value= Pctje_Dx,
+      min= 0,
+      max= 100,
+      symbol = '%',
+      label = " Felinos con Dx. (%)",
+      sectors= gaugeSectors(
+  success = c(80,100),
+  warning = c(56,79),
+  danger = c(0,55),
+  colors = c("success", "warning", "danger"))
+  )
+
+```
+
+
+Column {data-width="600"}
+-------------------------------------------------
+
+### Tabla Resumida
+```{r Anamnesis, echo=FALSE, include=TRUE}
+df.guide <- df.all[,c('codigo','fecha','name','especie','raza','sexo','vacunacion','desparasitacion','cond.corporal','percep.peso','nivel.activ','motivo.consulta...55','motivo.consulta...98','dx1','dx2','dx3','dx5')]
+##
+tablaresumida <- datatable(df.guide, extensions = c("Scroller", "Buttons"),
+                           options = list(dom = 'Bfrtip',
+                                          buttons = c('copy', 'csv', 'excel', 'pdf')))
+tablaresumida
+```  
+
+
+```{r echo=FALSE, message=FALSE, include=FALSE}
+var = "Edad"
+edad <- df_merged$edad.num.anios
+
+p <- ggplot(data= df_merged,
+            aes(x = as.factor(especie), y = as.numeric(edad.num.anios))
+            ) 
+p <- p + 
+  geom_violin(aes(col=sexo), fill= NA,
+                position = position_dodge(1), 
+                show.legend = FALSE) +
+  stat_summary(aes(fill= sexo),fun.data = 'mean_cl_normal' , geom = ,
+               width=0.05, col="darkslategray", linewidth= 0.7,
+               position = position_jitterdodge(jitter.height = 0,
+                                               jitter.width = 0,
+                                               dodge.width = 1),
+               show.legend = FALSE) +
+  stat_summary(aes(shape = sexo), col="darkslategray4",
+               fun = median, geom = "point", size= 3,
+               position = position_jitterdodge(jitter.height = 0,
+                                               jitter.width = 0,
+                                               dodge.width = 1),
+               show.legend = TRUE) +
+  geom_point(aes(col=sexo), size= 1,
+             position = position_jitterdodge(jitter.height = 0.2,
+                                             jitter.width = 0.2,
+                                             dodge.width = 1),
+             show.legend = TRUE) +
+  labs(y="Edad (años)",
+       x= "Especie",
+       title= paste(var, "promedio de los pacientes"))
+#p
+ggplotly(p)
+```  
+
+
+```{r include=FALSE}
+var = "Peso"
+#mean(as.numeric(df_merged$peso.kg), na.rm=TRUE)
+
+
+p <- ggplot(data= df_merged[df_merged$especie=="Canino",],
+            aes(x = as.factor(sexo), y = as.numeric(peso.kg))) 
+p <- p +
+  geom_violin(aes(col=sexo), fill= NA, 
+              position = position_dodge(1), 
+              show.legend = FALSE) +
+  stat_summary(aes(fill= sexo), fun.data = 'mean_cl_normal', geom = , 
+               width=0.05, col="darkslategray", linewidth= 0.7,
+               position = position_jitterdodge(jitter.height = 0,
+                                               jitter.width = 0,
+                                               dodge.width = 1),
+               show.legend = FALSE) +
+  stat_summary(aes(shape = sexo), col="darkslategray4",
+               fun = median, geom =, size= 2,
+               position = position_jitterdodge(jitter.height = 0,
+                                               jitter.width = 0,
+                                               dodge.width = 1),
+               show.legend = TRUE) +
+  geom_point(aes(col=sexo), size= 0.7, show.legend = TRUE,
+             position = position_jitterdodge(jitter.height = 0.2,
+                                             jitter.width = 0.5,
+                                             dodge.width = 1)) +
+  labs(y=paste(var, "(Kg)"),
+       x= "Sexo",
+       title= paste(var, "promedio de los pacientes [Caninos]") )
+#p
+ggplotly(p)
+```  
+
+
+```{r include=FALSE}
+
+
+var = "Peso"
+#mean(as.numeric(df_merged$peso.kg), na.rm=TRUE)
+
+
+p <- ggplot(data= df_merged[df_merged$especie=="Felino",],
+            aes(x = as.factor(sexo), y = as.numeric(peso.kg))) 
+p <- p +
+  geom_violin(aes(col=sexo), fill=NA, 
+              position = position_dodge(1), 
+              show.legend = FALSE) +
+  stat_summary(aes(fill= sexo), fun.data = 'mean_cl_normal', geom = , 
+               width=0.05, col="darkslategray", linewidth= 0.7,
+               position = position_jitterdodge(jitter.height = 0,
+                                               jitter.width = 0,
+                                               dodge.width = 1),
+               show.legend = FALSE) +
+  stat_summary(aes(shape = sexo), col="darkslategray4",
+               fun = median, geom = "point", size= 2,
+               position = position_jitterdodge(jitter.height = 0,
+                                               jitter.width = 0,
+                                               dodge.width = 1),
+               show.legend = TRUE) +
+  geom_point(aes(col=sexo), size= 0.7,
+             position = position_jitterdodge(jitter.height = 0,
+                                             jitter.width = 0.5,
+                                             dodge.width = 1),
+             show.legend = TRUE) +
+  labs(y=paste(var, "(Kg)"),
+       x= "Sexo",
+       title= paste(var, "promedio de los pacientes [Felinos]") )
+#p
+ggplotly(p)
+```
+
+
+
+
+
+```{r}
+```
+
+
+
+
+
+```{r Fig.Pago.sexo.sp, eval = TRUE, echo=FALSE, include= FALSE}
+
+df.all$precio.total <- as.numeric(df.all$precio.total)
+p.pago <- ggplot(data= df.all, aes(x= sexo, y= precio.total)) +
+  geom_violin() +
+#  geom_boxplot(aes(col= especie)) + 
+  geom_point(aes(col= especie ), 
+             position= position_jitter(width=0.2, height = 0.2), size=1) +
+  labs(title = "Precio de la consulta", x="Sexo del paciente")
+
+ggplotly(p.pago)
+```  
+
+
+
+```{r eval = TRUE, echo=FALSE, include= FALSE}
+p.pago <- ggplot(data= df.all, aes(x= sexo, y= precio.total)) + 
+#  geom_violin() +
+  geom_boxplot(aes(col= especie), outlier.shape = NA) + 
+  geom_point(aes(col= especie ), 
+             position= position_jitterdodge(jitter.width=0.3,
+                                            jitter.height = 0.01,
+                                            dodge.width = 0.8), size=1) +
+  labs(title = "Precio de la consulta", x="Sexo del paciente") +
+  scale_y_break(c(950,1560)) +
+  ylim(0,1940)
+p.pago
+```
+
+
+```{r Fig.Sp.Pago, echo=FALSE, include= FALSE}
+p.pago.sp <- ggplot(data= df.all, aes(x= especie, y= precio.total)) + 
+  geom_violin() + 
+#  geom_boxplot(aes(col=sexo)) +
+  geom_point(aes(col=sexo),
+             position= position_jitterdodge(jitter.width=0.3,
+                                            jitter.height = 0.01,
+                                            dodge.width = 0.8), size=1) +
+  labs(title = "Precio de la consulta", x="especie del paciente") +
+  scale_y_break(c(950,1560))
+ggplotly(p.pago.sp)
+```  
+
+
+```{r echo=FALSE, include=FALSE}
+p.pago.sp <- ggplot(data= df.all, aes(x= especie, y= precio.total)) + 
+#  geom_violin() + 
+  geom_boxplot(aes(col=sexo), outlier.shape = NA) +
+  geom_point(aes(col=sexo),
+             position= position_jitterdodge(jitter.width=0.3,
+                                            jitter.height = 0.01,
+                                            dodge.width = 0.8), size=1) +
+  labs(title = "Precio de la consulta", x="especie del paciente") +
+  scale_y_break(c(950,1560))
+p.pago.sp
+```  
+
+
+
+
+
+```{r}
+```  
+
+
+
+
+```{r Fig  , echo=FALSE, include= FALSE}
+p <- ggplot(data= df.all, 
+            aes(x= especie, fill= raza)) +
+  labs(title = "Distribución de pacientes por Raza y Especie", x="especie del paciente", y= "n") +
+  geom_bar(width = 0.7)
+ggplotly(p)
+```
+
+
+```{r echo=FALSE, include=FALSE}
+table(df.all$estad.reprod, df.all$sexo)
+```  
+
+
+```{r Fig.f2, echo=FALSE, include= FALSE, fig.dim=10}
+## Pie chart
+
+
+estado.Reprod <- data.frame(Estad.reprod= rev(c("Castrado", "Intacto", "NA")),
+                            n = rev(c(sum(as.numeric(df.all$estad.reprod=="Castrado (remoción de gónadas)"|df.all$estad.reprod=="Castrado (vasectomía)"),na.rm=TRUE),
+                                  sum(as.numeric(df.all$estad.reprod=="Intacto (normal)"),
+                                      na.rm = TRUE),
+                                  sum(as.numeric(is.na(df.all$estad.reprod)))))
+)
+
+p <- ggplot(data= estado.Reprod, aes(x="Animals", y=n, fill=Estad.reprod)) 
+p <- p + geom_bar(stat = "identity", width=1, color="white") +
+  labs(title = "Animals") + 
+  scale_fill_brewer(palette="Blues")
+   
+p2 <- p +
+  geom_text(aes(y = n/2 + c(0, cumsum(n)[-length(n)]),
+                label = n ), size=4)
+#p2
+## blank_theme
+
+blank_theme <- theme_minimal()+
+  theme(
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.border = element_blank(),
+  panel.grid=element_blank(),
+  axis.ticks = element_blank(),
+  plot.title=element_text(size=14, face="bold")
+  )
+
+p3 <- p + labs(title = "Proporción de animales (%)") + 
+  #scale_fill_brewer(palette="Blues")
+  coord_polar("y", start=0) +
+  #scale_fill_brewer(palette="Blues") + 
+  blank_theme +
+  theme(axis.text.x=element_blank()) +
+  geom_text(aes(y = n/2 + c(0, cumsum(n)[-length(n)]),
+                label = percent(n/sum(n)) ), size=5) +
+    theme_void() # remove background, grid, numeric labels
+p3
+```  
+
+
+```{r echo=FALSE, include=FALSE}
+######
+EstadRep <- data.frame(Estado.reprod= (c("Castrado","Castrado","Castrado(Vasect.)","Castrado(Vasect.)",
+                               "Intacto", "Intacto", "NA", "NA")),
+           sexo = (c("hembra", "macho","hembra", "macho","hembra", "macho","hembra", "macho") ),
+           n = (c(sum(as.numeric(df.all$estad.reprod=="Castrado (remoción de gónadas)"&df.all$sexo=="Hembra"), na.rm = TRUE),
+                  sum(as.numeric(df.all$estad.reprod=="Castrado (remoción de gónadas)"&df.all$sexo=="Macho"), na.rm = TRUE),
+                  sum(as.numeric(df.all$estad.reprod=="Castrado (vasectomía)"&df.all$sexo=="Hembra"), na.rm = TRUE),
+                  sum(as.numeric(df.all$estad.reprod=="Castrado (vasectomía)"&df.all$sexo=="Macho"), na.rm = TRUE),
+                  sum(as.numeric(df.all$estad.reprod=="Intacto (normal)"&df.all$sexo=="Hembra"), na.rm = TRUE),
+                  sum(as.numeric(df.all$estad.reprod=="Intacto (normal)"&df.all$sexo=="Macho"), na.rm = TRUE),
+                  sum(as.numeric(df.all$sexo=="Hembra"&is.na(df.all$estad.reprod)) ),
+                  sum(as.numeric(df.all$sexo=="Macho"&is.na(df.all$estad.reprod)) )
+           ))
+)
+p <- ggplot(data= EstadRep, 
+       aes(x= Estado.reprod, y= n, fill= sexo )) +
+  geom_col(width = 0.5) +
+  labs(title = "Estado reproductivo y sexo del paciente", x="Estado Reproductivo")
+  
+p.lab <- p + geom_text(aes(label = n), size = 4, 
+                       hjust = 0.5, vjust = 1, 
+                       position = "stack") + 
+  theme_gray(base_size = 13)
+
+p.lab
+
+
+```
+
+
+
+
+```{r Fig.f3 , echo=FALSE, include=FALSE}
+### Fig 3. Spp X Sexo
+
+p.3 <- ggplot(data= df.all, 
+              aes(x= especie, fill= sexo)) + geom_bar() +
+  scale_fill_brewer(palette="Blues")
+ggplotly(p.3)
+```
+
+
+
+```{r Fig.f4 , echo=FALSE, include= FALSE}
+confinam <- data.frame(Confinam= rev(c("acceso.a.la.casa","confinado.al.patio","sale.a.calle")),
+                       n = rev(c(sum(as.numeric(df.all$confin.casa=="si"|df.all$confin.casa=="Si"|df.all$confin.casa=="SI"|df.all$confin.casa=="Sí"), na.rm = TRUE),
+                                 sum(as.numeric(df.all$confin.patio =="si"&df.all$confin.casa=="No"&df.all$confin.calle=="No"|df.all$confin.patio =="Si"&df.all$confin.casa=="No"&df.all$confin.calle=="No"|df.all$confin.patio =="SI"&df.all$confin.casa=="No"&df.all$confin.calle=="No"|df.all$confin.patio =="Sí"&df.all$confin.casa=="No"&df.all$confin.calle=="No"|df.all$confin.patio =="si"&df.all$confin.casa=="No"&df.all$confin.calle=="no"|df.all$confin.patio =="Si"&df.all$confin.casa=="No"&df.all$confin.calle=="no"|df.all$confin.patio =="SI"&df.all$confin.casa=="No"&df.all$confin.calle=="no"|df.all$confin.patio =="Sí"&df.all$confin.casa=="No"&df.all$confin.calle=="no"), na.rm = TRUE),
+                                 sum(as.numeric(df.all$confin.calle=="si"|df.all$confin.calle=="Si"|df.all$confin.calle=="SI"), na.rm = TRUE)
+                       ))
+)
+#
+p <- ggplot(data= confinam, aes(x="Animals", y=n, fill=Confinam)) 
+p <- p + geom_bar(stat = "identity", width=1, color="white") +
+  labs(title = "Animals") + 
+  scale_fill_brewer(palette="Blues")
+   
+p2 <- p +
+  geom_text(aes(y = n/2 + c(0, cumsum(n)[-length(n)]),
+                label = n ), size=4)
+#p2
+## blank_theme
+
+blank_theme <- theme_minimal()+
+  theme(
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.border = element_blank(),
+  panel.grid=element_blank(),
+  axis.ticks = element_blank(),
+  plot.title=element_text(size=14, face="bold")
+  )
+
+p3 <- p + labs(title = "Confinamiento: Proporción de animales (%)") + 
+  #scale_fill_brewer(palette="Blues")
+  coord_polar("y", start=0) +
+  #scale_fill_brewer(palette="Blues") + 
+  blank_theme +
+  theme(axis.text.x=element_blank()) +
+  geom_text(aes(y = n/2 + c(0, cumsum(n)[-length(n)]),
+                label = percent(n/sum(n)) ), size=5) +
+    theme_void() # remove background, grid, numeric labels
+p3
+
+
+```  
+
+
+```{r echo=FALSE, include= FALSE}
+confinam.sex <- data.frame(Confinam= rev(c("casa.patio","casa.patio",
+                        "sale.calle", "sale.calle")),
+           sexo = rev(c("hembra", "macho",
+                     "hembra", "macho")),
+           n = rev(c(sum(as.numeric(df.all$confin.calle=="no"&df.all$sexo=="Hembra"|df.all$confin.calle=="No"&df.all$sexo=="Hembra"), na.rm = TRUE),
+                  sum(as.numeric(df.all$confin.calle=="no"&df.all$sexo=="Macho"|df.all$confin.calle=="No"&df.all$sexo=="Macho"), na.rm = TRUE),
+                  sum(as.numeric(df.all$confin.calle=="Si"&df.all$sexo=="Hembra"|df.all$confin.calle=="si"&df.all$sexo=="Hembra"|df.all$confin.calle=="SI"&df.all$sexo=="Hembra"), na.rm = TRUE),
+                  sum(as.numeric(df.all$confin.calle=="Si"&df.all$sexo=="Macho"|df.all$confin.calle=="si"&df.all$sexo=="Macho"|df.all$confin.calle=="SI"&df.all$sexo=="Macho"), na.rm = TRUE)
+                  ))
+)
+p.4 <- ggplot(data= confinam.sex, 
+              aes(x= Confinam, y= n, fill= sexo )) +
+  geom_col(position = "stack")
+
+
+p <- ggplot(data= confinam.sex, 
+       aes(x= Confinam, y= n, fill= sexo )) +
+  geom_col(width = 0.7) +
+  labs(title = "Acceso a calle y sexo del paciente", x="Acceso a calle")
+  
+p.lab <- p + geom_text(aes(label = n), size = 4, 
+                       hjust = 0.5, vjust = 1, 
+                       position = "stack") + 
+  theme_gray(base_size = 13)
+p.lab
+```  
+
+
+
+
+```{r}
+```  
+
+
+
+
+```{r echo=FALSE, include= FALSE}
+estado.vacuna <- data.frame(Estad.vacunacion= (c("Vac.completa","Vac.completa",
+                                "Vac.Incompleta", "Vac.Incompleta",
+                                "Vac.NA", "Vac.NA")),
+           sexo = (c("hembra", "macho",
+                     "hembra", "macho",
+                     "hembra", "macho")),
+           n = (c(sum(as.numeric(df.all$vacunacion=="Vacunación completa"&df.all$sexo=="Hembra"), na.rm = TRUE),
+                  sum(as.numeric(df.all$vacunacion=="Vacunación completa"&df.all$sexo=="Macho"), na.rm = TRUE),
+                  sum(as.numeric(df.all$vacunacion=="Vacunación incompleta (menos de 3 refuerzos)"&df.all$sexo=="Hembra"|df.all$vacunacion=="Vacunación incompleta (más de un año desde el último refuerzo)"&df.all$sexo=="Hembra"), na.rm = TRUE),
+                  sum(as.numeric(df.all$vacunacion=="Vacunación incompleta (menos de 3 refuerzos)"&df.all$sexo=="Macho"|df.all$vacunacion=="Vacunación incompleta (más de un año desde el último refuerzo)"&df.all$sexo=="Macho"), na.rm = TRUE),
+                  sum(as.numeric(df.all$sexo=="Hembra"&is.na(df.all$vacunacion)) ),
+                  sum(as.numeric(df.all$sexo=="Macho"&is.na(df.all$vacunacion)) )
+           ))
+)
+
+p <- ggplot(data= estado.vacuna, 
+       aes(x= Estad.vacunacion, y= n, fill= sexo )) +
+  geom_col(width = 0.5) +
+  labs(title = "Estado vacunación y sexo del paciente", x="Estado de vacunación")
+  
+p.lab <- p + geom_text(aes(label = n), size = 4, 
+                       hjust = 0.5, vjust = c(2,2,2,2,1,1), 
+                       position = "stack")
+p.lab
+
+
+```
+
+
+```{r echo=FALSE, include= FALSE}
+## Pie chart
+estado.vacuna <- data.frame(Estad.vacunacion= rev(c("Vac.completa", "Vac.Incompleta","Vac.NA")),
+                            n = rev(c(sum(as.numeric(df.all$vacunacion=="Vacunación completa"), na.rm = TRUE),
+                                   sum(as.numeric(df.all$vacunacion=="Vacunación incompleta (menos de 3 refuerzos)"|df.all$vacunacion=="Vacunación incompleta (más de un año desde el último refuerzo)"), na.rm = TRUE), 
+                                   sum(as.numeric(is.na(df.all$vacunacion)) ))))
+
+
+p <- ggplot(data= estado.vacuna, aes(x="Animals", y=n, fill=Estad.vacunacion)) 
+p <- p + geom_bar(stat = "identity", width=1, color="white") +
+  labs(title = "Animals") + 
+  scale_fill_brewer(palette="Blues")
+   
+p2 <- p +
+  geom_text(aes(y = n/2 + c(0, cumsum(n)[-length(n)]),
+                label = n ), size=4)
+#p2
+## blank_theme
+
+blank_theme <- theme_minimal()+
+  theme(
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.border = element_blank(),
+  panel.grid=element_blank(),
+  axis.ticks = element_blank(),
+  plot.title=element_text(size=14, face="bold")
+  )
+
+p3 <- p + labs(title = "Estado de vacunación: Proportion de animales (%)") + 
+  #scale_fill_brewer(palette="Blues")
+  coord_polar("y", start=0) +
+  #scale_fill_brewer(palette="Blues") + 
+  blank_theme +
+  theme(axis.text.x=element_blank()) +
+  geom_text(aes(y = n/2 + c(0, cumsum(n)[-length(n)]),
+                label = percent(n/sum(n)) ), size=5) +
+    theme_void() # remove background, grid, numeric labels
+p3
+```
+
+
+
+```{r echo=FALSE, include= FALSE}
+Rabia.vacuna<- data.frame(Estado.vacunacion= (c("Rabia.No.Vacunado",
+                                                 "Rabia.No.Vacunado",
+                                                 "Vacunado.Rabia",
+                                                 "Vacunado.Rabia")),
+           sexo = (c("hembra", "macho",
+                     "hembra", "macho")),
+           n = (c(sum(as.numeric(df.all$vac.rabia.canino=="No"&df.all$sexo=="Hembra"), na.rm = TRUE),
+                  sum(as.numeric(df.all$vac.rabia.canino=="No"&df.all$sexo=="Macho"), na.rm = TRUE),
+                  sum(as.numeric(df.all$vac.rabia.canino=="Si"&df.all$sexo=="Hembra"|df.all$vac.rabia.canino=="SI"&df.all$sexo=="Hembra"), na.rm = TRUE),
+                  sum(as.numeric(df.all$vac.rabia.canino=="Si"&df.all$sexo=="Macho"|df.all$vac.rabia.canino=="SI"&df.all$sexo=="Macho"), na.rm = TRUE)
+                  ))
+)
+
+p <- ggplot(data= Rabia.vacuna, 
+       aes(x= Estado.vacunacion, y= n, fill= sexo )) +
+  geom_col(width = 0.5) +
+  labs(title = "Estado vacuna de Rabia y sexo del paciente", x="Estado de vacunación")
+  
+p.lab <- p + geom_text(aes(label = n), size = 4, 
+                       hjust = 0.5, vjust = c(2,2,1,0.6), 
+                       position = "stack")
+p.lab
+
+
+```  
+
+
+
+```{r  echo=FALSE, include= FALSE}
+Rabia.vacuna.pr <- data.frame(Estado.vacunacion= rev(c("Rabia.No.Vacunado", "Vacunado.Rabia")),
+                              n = rev(c(sum(as.numeric(df.all$vac.rabia.canino=="No"), na.rm = TRUE),
+                                     sum(as.numeric(df.all$vac.rabia.canino=="Si"|df.all$vac.rabia.canino=="SI"), na.rm = TRUE)
+                                     ))
+)
+
+
+p <- ggplot(data= Rabia.vacuna.pr, aes(x="Animals", y=n, fill=Estado.vacunacion)) 
+p <- p + geom_bar(stat = "identity", width=1, color="white") +
+  labs(title = "Animals") + 
+  scale_fill_brewer(palette="Reds")
+   
+p2 <- p +
+  geom_text(aes(y = n/2 + c(0, cumsum(n)[-length(n)]),
+                label = n ), size=4)
+#p2
+## blank_theme
+
+blank_theme <- theme_minimal()+
+  theme(
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.border = element_blank(),
+  panel.grid=element_blank(),
+  axis.ticks = element_blank(),
+  plot.title=element_text(size=14, face="bold")
+  )
+
+a <- sum(as.numeric(df.all$vac.rabia.canino=="Si"|df.all$vac.rabia.canino=="SI"), na.rm = TRUE)/(sum(as.numeric(df.all$vac.rabia.canino=="No"), na.rm = TRUE)+sum(as.numeric(df.all$vac.rabia.canino=="Si"|df.all$vac.rabia.canino=="SI"), na.rm = TRUE))
+a <- 100*round(a,2)
+
+p3 <- p + labs(title = paste("Proporción de animales vacunados contra Rabia (",a,"%)")) + 
+  #scale_fill_brewer(palette="Blues")
+  coord_polar("y", start=0) +
+  #scale_fill_brewer(palette="Oranges") + 
+  blank_theme +
+  theme(axis.text.x=element_blank()) +
+  geom_text(aes(y = n/2 + c(0, cumsum(n)[-length(n)]),
+                label = percent(n/sum(n)) ), size=5) +
+    theme_void() # remove background, grid, numeric labels
+p3
+
+```  
+
+
+```{r include=FALSE}
+Rab.vac.calle <- data.frame(Estado.vacunacion= rev(c("Sin.Vacuna", "Sin.Vacuna",
+                                                 ".Vacunado.Rabia", ".Vacunado.Rabia")),
+                            Acceso.a.calle = rev(c("Confinado.Casa_Patio", "Acceso.a.Calle",
+                                                   "Confinado.Casa_Patio", "Acceso.a.Calle")),
+                            n = rev(c(sum(as.numeric(df.all$vac.rabia.canino=="No"&df.all$confin.calle=="no"|df.all$vac.rabia.canino=="No"&df.all$confin.calle=="No"), na.rm = TRUE),
+                                      sum(as.numeric(df.all$vac.rabia.canino=="No"&df.all$confin.calle=="si"|df.all$vac.rabia.canino=="No"&df.all$confin.calle=="si"|df.all$vac.rabia.canino=="No"&df.all$confin.calle=="Si"|df.all$vac.rabia.canino=="No"&df.all$confin.calle=="Si"|df.all$vac.rabia.canino=="No"&df.all$confin.calle=="SI"|df.all$vac.rabia.canino=="No"&df.all$confin.calle=="SI"), na.rm = TRUE),
+                                      sum(as.numeric(df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="no"|df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="No"|df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="no"|df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="No"), na.rm = TRUE),
+                                      sum(as.numeric(df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="si"|df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="si"|df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="Si"|df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="Si"|df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="SI"|df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="SI"), na.rm = TRUE)
+                                     ))
+)
+
+
+p <- ggplot(data= Rab.vac.calle, 
+       aes(x= Acceso.a.calle , y= n, fill= Estado.vacunacion )) +
+  geom_col(width = 0.5, col="white") +
+  labs(title = "Estado vacuna de Rabia y acceso a calle", x="Estado de vacunación") +
+  scale_fill_brewer(palette="Reds")
+  
+p.lab <- p + geom_text(aes(label = n), size = 4, 
+                       hjust = 0.5, vjust = c(1,1,2,2), 
+                       position = "stack")
+p.lab
+
+
+
+```
+
+
+
+```{r include=FALSE}
+Rab.vac.calle.pr <- data.frame(Estado.vacunacion= rev(c(".Vacunado.Rabia", 
+                                                        "Sin.Vacuna")),
+                               n = rev(c(sum(as.numeric(df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="si"|
+                                                      df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="si"|
+                                                      df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="Si"|
+                                                      df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="Si"|
+                                                      df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="SI"|
+                                                      df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="SI"), na.rm = TRUE),
+                                     sum(as.numeric(df.all$vac.rabia.canino=="No"&df.all$confin.calle=="si"|
+                                                      df.all$vac.rabia.canino=="No"&df.all$confin.calle=="si"|
+                                                      df.all$vac.rabia.canino=="No"&df.all$confin.calle=="Si"|
+                                                      df.all$vac.rabia.canino=="No"&df.all$confin.calle=="Si"|
+                                                      df.all$vac.rabia.canino=="No"&df.all$confin.calle=="SI"|
+                                                      df.all$vac.rabia.canino=="No"&df.all$confin.calle=="SI"), na.rm = TRUE)
+                                     ))
+)
+
+p <- ggplot(data= Rab.vac.calle.pr, aes(x="Animals", y=n, fill=Estado.vacunacion)) 
+p <- p + geom_bar(stat = "identity", width=1, color="white") +
+  labs(title = "Animals") + 
+  scale_fill_brewer(palette="Reds")
+   
+p2 <- p +
+  geom_text(aes(y = n/2 + c(0, cumsum(n)[-length(n)]),
+                label = n ), size=4)
+#p2
+## blank_theme
+
+blank_theme <- theme_minimal()+
+  theme(
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.border = element_blank(),
+  panel.grid=element_blank(),
+  axis.ticks = element_blank(),
+  plot.title=element_text(size=14, face="bold")
+  )
+
+a <- sum(as.numeric(df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="si"|
+                                                      df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="si"|
+                                                      df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="Si"|
+                                                      df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="Si"|
+                                                      df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="SI"|
+                                                      df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="SI"), na.rm = TRUE)/(sum(as.numeric(df.all$vac.rabia.canino=="No"&df.all$confin.calle=="si"|
+                                                      df.all$vac.rabia.canino=="No"&df.all$confin.calle=="si"|
+                                                      df.all$vac.rabia.canino=="No"&df.all$confin.calle=="Si"|
+                                                      df.all$vac.rabia.canino=="No"&df.all$confin.calle=="Si"|
+                                                      df.all$vac.rabia.canino=="No"&df.all$confin.calle=="SI"|
+                                                      df.all$vac.rabia.canino=="No"&df.all$confin.calle=="SI"), na.rm = TRUE)+sum(as.numeric(df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="si"|
+                                                      df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="si"|
+                                                      df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="Si"|
+                                                      df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="Si"|
+                                                      df.all$vac.rabia.canino=="Si"&df.all$confin.calle=="SI"|
+                                                      df.all$vac.rabia.canino=="SI"&df.all$confin.calle=="SI"), na.rm = TRUE))
+a<- 100*round(1-a,2)
+p3 <- p + labs(title = paste("Proporción de animales con acceso a calle y sin vacuna de Rabia (",a,"%)")) + 
+  #scale_fill_brewer(palette="Blues")
+  coord_polar("y", start=0) +
+  #scale_fill_brewer(palette="Oranges") + 
+  blank_theme +
+  theme(axis.text.x=element_blank()) +
+  geom_text(aes(y = n/2 + c(0, cumsum(n)[-length(n)]),
+                label = percent(n/sum(n)) ), size=5) +
+    theme_void() # remove background, grid, numeric labels
+p3
+```
+
